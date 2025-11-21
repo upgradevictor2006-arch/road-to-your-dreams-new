@@ -5,6 +5,7 @@ import goalsRoutes from './routes/goals';
 import usersRoutes from './routes/users';
 import caravansRoutes from './routes/caravans';
 import { verifyTelegramWebAppData } from './middleware/telegramAuth';
+import './bot'; // Инициализируем Telegram бота
 
 dotenv.config();
 
