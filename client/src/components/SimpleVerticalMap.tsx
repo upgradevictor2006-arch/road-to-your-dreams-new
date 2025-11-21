@@ -1,0 +1,207 @@
+import { motion } from 'framer-motion';
+
+interface Checkpoint {
+  label: string;
+  description?: string;
+  completed?: boolean; // Выполнен ли чекпоинт
+}
+
+interface SimpleVerticalMapProps {
+  progress?: number; // 0-100
+  checkpoints?: Checkpoint[];
+  goalTitle?: string;
+  dailyTask?: string;
+  completedDailyTasks?: Array<{ task: string; completed: boolean }>; // История выполненных задач
+  animateLineFill?: boolean; // Анимация заполнения линии
+  animateDailyTask?: boolean; // Анимация плашки ежедневной задачи
+}
+
+const SimpleVerticalMap = ({
+  progress = 0,
+  checkpoints = [],
+  goalTitle = 'Финальная цель',
+  dailyTask = '',
+  completedDailyTasks = [],
+  animateLineFill = false,
+  animateDailyTask = false
+}: SimpleVerticalMapProps) => {
+  // Создаем массив всех элементов в правильном порядке:
+  // Старт -> Ежедневные задачи (до первого чекпоинта) -> Чекпоинт 1 -> [после выполнения чекпоинта 1] Ежедневные задачи -> Чекпоинт 2 -> ... -> Финал
+  const hasDailyTask = !!dailyTask;
+  const allElements: Array<{ type: 'start' | 'daily' | 'checkpoint' | 'finish'; label: string; description?: string; completed?: boolean; checkpointIndex?: number }> = [
+    { type: 'start', label: 'Старт' }
+  ];
+  
+  // Находим индекс последнего выполненного чекпоинта
+  let lastCompletedCheckpointIndex = -1;
+  for (let i = 0; i < checkpoints.length; i++) {
+    if (checkpoints[i].completed) {
+      lastCompletedCheckpointIndex = i;
+    } else {
+      break; // Прерываем, если нашли невыполненный чекпоинт
+    }
+  }
+  
+  // Если ни один чекпоинт не выполнен, показываем ежедневные задачи после старта (до первого чекпоинта)
+  if (lastCompletedCheckpointIndex === -1) {
+    // Добавляем выполненные задачи
+    completedDailyTasks.forEach((task) => {
+      allElements.push({ 
+        type: 'daily' as const, 
+        label: 'Ежедневная задача', 
+        description: task.task,
+        completed: task.completed
+      });
+    });
+    
+    // Добавляем текущую ежедневную задачу (если есть)
+    if (hasDailyTask) {
+      allElements.push({ 
+        type: 'daily' as const, 
+        label: 'Ежедневная задача', 
+        description: dailyTask, 
+        completed: false 
+      });
+    }
+  }
+  
+  // Добавляем чекпоинты и ежедневные задачи
+  checkpoints.forEach((cp, index) => {
+    // Добавляем чекпоинт
+    allElements.push({ 
+      type: 'checkpoint' as const, 
+      label: cp.label, 
+      description: cp.description, 
+      completed: cp.completed || false,
+      checkpointIndex: index
+    });
+    
+    // Если этот чекпоинт выполнен и это последний выполненный, добавляем ежедневные задачи после него
+    if (cp.completed && index === lastCompletedCheckpointIndex) {
+      // Добавляем выполненные задачи
+      completedDailyTasks.forEach((task) => {
+        allElements.push({ 
+          type: 'daily' as const, 
+          label: 'Ежедневная задача', 
+          description: task.task,
+          completed: task.completed
+        });
+      });
+      
+      // Добавляем текущую ежедневную задачу (если есть)
+      if (hasDailyTask) {
+        allElements.push({ 
+          type: 'daily' as const, 
+          label: 'Ежедневная задача', 
+          description: dailyTask, 
+          completed: false 
+        });
+      }
+    }
+  });
+  
+  // Добавляем финальную цель
+  allElements.push({ type: 'finish', label: goalTitle });
+
+  const lineHeight = 120; // Высота линии между элементами (удлинена)
+  
+  // Находим индекс текущей ежедневной задачи (последней незавершенной)
+  let currentDailyTaskIndex = -1;
+  for (let i = allElements.length - 1; i >= 0; i--) {
+    if (allElements[i].type === 'daily' && !allElements[i].completed) {
+      currentDailyTaskIndex = i;
+      break;
+    }
+  }
+
+  return (
+    <div 
+      className="w-full flex flex-col items-center"
+      style={{ 
+        paddingTop: '0px',
+        paddingBottom: '20px'
+      }}
+    >
+      {allElements.map((element, index) => {
+        const isStart = element.type === 'start';
+        const isFinish = element.type === 'finish';
+        const isDaily = element.type === 'daily';
+        const isCheckpoint = element.type === 'checkpoint';
+        const isCurrentDailyTask = isDaily && index === currentDailyTaskIndex;
+        const isCompletedDaily = element.completed === true;
+        const isSkippedDaily = isDaily && element.completed === false; // Невыполненная задача
+        const isCompletedCheckpoint = isCheckpoint && element.completed === true;
+        // Невыполненные задачи всегда остаются красными, независимо от прогресса
+        const isCompleted = (isSkippedDaily ? false : (progress >= ((index + 1) / allElements.length) * 100 || isCompletedDaily || isCompletedCheckpoint));
+        const shouldAnimateLine = animateLineFill && index === currentDailyTaskIndex - 1 && index >= 0;
+        const shouldAnimateTask = animateDailyTask && isCurrentDailyTask;
+
+        return (
+          <div key={`${element.type}-${index}-${element.description}`} className="w-full flex flex-col items-center">
+            {/* Кнопка */}
+            <motion.button
+              initial={shouldAnimateTask ? { scale: 0.95 } : false}
+              animate={shouldAnimateTask ? { 
+                scale: [0.95, 1.05, 1],
+                backgroundColor: ['#f3f4f6', '#dcfce7', '#dcfce7']
+              } : {}}
+              transition={shouldAnimateTask ? { 
+                duration: 0.8,
+                times: [0, 0.5, 1]
+              } : {}}
+              className={`rounded-lg border-2 px-6 py-3 transition-all ${
+                isSkippedDaily
+                  ? 'bg-red-50 border-red-300 text-red-600 opacity-60' // Невыполненные задачи всегда красные
+                  : isCompleted || isCompletedDaily || isCompletedCheckpoint
+                  ? isStart || isFinish
+                    ? 'bg-orange-100 border-orange-400 text-orange-700'
+                    : isCheckpoint && isCompletedCheckpoint
+                    ? 'bg-green-100 border-green-400 text-green-700'
+                    : 'bg-green-100 border-green-400 text-green-700'
+                  : 'bg-gray-100 border-gray-300 text-gray-700'
+              }`}
+              style={{
+                minWidth: '200px',
+                textAlign: 'center'
+              }}
+            >
+              <div className="font-medium text-base">{element.label}</div>
+              {element.description && (
+                <div className="text-sm mt-1 opacity-80">{element.description}</div>
+              )}
+            </motion.button>
+
+            {/* Линия (кроме последнего элемента) */}
+            {index < allElements.length - 1 && (
+              <div className="relative w-0.5 my-4" style={{ height: `${lineHeight}px` }}>
+                {/* Фоновая серая линия */}
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    backgroundColor: '#d1d5db'
+                  }}
+                />
+                {/* Зеленая заполненная линия */}
+                <motion.div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundColor: '#10b981',
+                    originY: 0
+                  }}
+                  initial={{ scaleY: isCompleted ? 1 : 0 }}
+                  animate={shouldAnimateLine ? { scaleY: 1 } : { scaleY: isCompleted ? 1 : 0 }}
+                  transition={{ 
+                    duration: shouldAnimateLine ? 1 : 0.3,
+                    ease: "easeInOut"
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default SimpleVerticalMap;
