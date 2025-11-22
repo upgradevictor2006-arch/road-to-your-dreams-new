@@ -26,67 +26,58 @@ import './App.css';
 
 function App() {
   const [showPreloader, setShowPreloader] = useState(true);
-  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-  const [hasGoals, setHasGoals] = useState<boolean | null>(null);
+  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean>(false);
+  const [hasGoals, setHasGoals] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Проверяем, первый ли это запуск приложения
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    setIsFirstLaunch(hasSeenOnboarding === null);
-    
-    // Проверяем наличие целей
-    const checkGoals = async () => {
+    const initializeApp = async () => {
       try {
-        const goals = await goalsStorage.getAll();
-        setHasGoals(goals.length > 0);
+        // Проверяем, первый ли это запуск приложения
+        const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+        const firstLaunch = hasSeenOnboarding === null;
+        setIsFirstLaunch(firstLaunch);
+        
+        // Проверяем наличие целей - используем синхронную проверку localStorage как fallback
+        let goalsExist = false;
+        try {
+          // Сначала проверяем localStorage напрямую (быстро)
+          const localGoals = localStorage.getItem('goals');
+          if (localGoals) {
+            const parsed = JSON.parse(localGoals);
+            goalsExist = Array.isArray(parsed) && parsed.length > 0;
+          }
+          
+          // Затем пытаемся проверить через API (если доступно)
+          try {
+            const goals = await Promise.race([
+              goalsStorage.getAll(),
+              new Promise<any[]>((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 1000)
+              )
+            ]);
+            goalsExist = Array.isArray(goals) && goals.length > 0;
+          } catch (apiError) {
+            // Игнорируем ошибки API, используем значение из localStorage
+            console.log('Using localStorage goals check');
+          }
+        } catch (error) {
+          console.error('Error checking goals:', error);
+          goalsExist = false;
+        }
+        
+        setHasGoals(goalsExist);
       } catch (error) {
-        console.error('Error loading goals:', error);
-        // В случае ошибки считаем, что целей нет
+        console.error('Error initializing app:', error);
+        // В случае любой ошибки показываем экран создания цели
+        setIsFirstLaunch(false);
         setHasGoals(false);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    // Запускаем проверку целей
-    let goalsCheckCompleted = false;
-    checkGoals()
-      .then(() => {
-        goalsCheckCompleted = true;
-      })
-      .catch((error) => {
-        console.error('Failed to check goals:', error);
-        setHasGoals(false);
-        goalsCheckCompleted = true;
-      });
-    
-    // Таймаут на случай, если проверка зависла
-    const timeout = setTimeout(() => {
-      if (!goalsCheckCompleted) {
-        console.warn('Goals check timeout, defaulting to false');
-        setHasGoals(false);
-      }
-    }, 3000);
-    
-    // Слушаем изменения в localStorage (на случай, если цели были созданы в другой вкладке)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'goals') {
-        checkGoals();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Также проверяем при фокусе окна (на случай, если цели были созданы в той же вкладке)
-    const handleFocus = () => {
-      checkGoals();
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleFocus);
-    };
+
+    initializeApp();
   }, []);
 
   const handlePreloaderComplete = () => {
@@ -99,7 +90,7 @@ function App() {
     // После онбординга проверяем наличие целей
     try {
       const goals = await goalsStorage.getAll();
-      setHasGoals(goals.length > 0);
+      setHasGoals(Array.isArray(goals) && goals.length > 0);
     } catch (error) {
       console.error('Error loading goals:', error);
       setHasGoals(false);
@@ -115,11 +106,15 @@ function App() {
     );
   }
 
-  // Если данные еще загружаются, показываем пустой экран с фоном
-  if (isFirstLaunch === null || hasGoals === null) {
+  // Если данные еще загружаются, показываем минимальный экран
+  if (isLoading) {
     return (
       <TelegramProvider>
-        <div className="fixed inset-0 bg-background-light dark:bg-background-dark" />
+        <BrowserRouter>
+          <div className="fixed inset-0 bg-background-light dark:bg-background-dark flex items-center justify-center">
+            <div className="text-text-light dark:text-text-dark">Загрузка...</div>
+          </div>
+        </BrowserRouter>
       </TelegramProvider>
     );
   }
@@ -133,9 +128,9 @@ function App() {
             <Route 
               path="/" 
               element={
-                isFirstLaunch === true ? (
+                isFirstLaunch ? (
                   <OnboardingScreen onComplete={handleOnboardingComplete} />
-                ) : hasGoals === true ? (
+                ) : hasGoals ? (
                   <Navigate to="/map" replace />
                 ) : (
                   <Navigate to="/create-dream-intro" replace />
