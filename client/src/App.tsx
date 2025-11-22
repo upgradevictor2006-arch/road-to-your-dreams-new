@@ -47,14 +47,20 @@ function App() {
     };
     
     // Запускаем проверку целей
-    checkGoals().catch((error) => {
-      console.error('Failed to check goals:', error);
-      setHasGoals(false);
-    });
+    let goalsCheckCompleted = false;
+    checkGoals()
+      .then(() => {
+        goalsCheckCompleted = true;
+      })
+      .catch((error) => {
+        console.error('Failed to check goals:', error);
+        setHasGoals(false);
+        goalsCheckCompleted = true;
+      });
     
     // Таймаут на случай, если проверка зависла
     const timeout = setTimeout(() => {
-      if (hasGoals === null) {
+      if (!goalsCheckCompleted) {
         console.warn('Goals check timeout, defaulting to false');
         setHasGoals(false);
       }
