@@ -41,11 +41,24 @@ function App() {
         setHasGoals(goals.length > 0);
       } catch (error) {
         console.error('Error loading goals:', error);
+        // В случае ошибки считаем, что целей нет
         setHasGoals(false);
       }
     };
     
-    checkGoals();
+    // Запускаем проверку целей
+    checkGoals().catch((error) => {
+      console.error('Failed to check goals:', error);
+      setHasGoals(false);
+    });
+    
+    // Таймаут на случай, если проверка зависла
+    const timeout = setTimeout(() => {
+      if (hasGoals === null) {
+        console.warn('Goals check timeout, defaulting to false');
+        setHasGoals(false);
+      }
+    }, 3000);
     
     // Слушаем изменения в localStorage (на случай, если цели были созданы в другой вкладке)
     const handleStorageChange = (e: StorageEvent) => {
@@ -64,6 +77,7 @@ function App() {
     window.addEventListener('focus', handleFocus);
     
     return () => {
+      clearTimeout(timeout);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleFocus);
     };
@@ -95,6 +109,15 @@ function App() {
     );
   }
 
+  // Если данные еще загружаются, показываем пустой экран с фоном
+  if (isFirstLaunch === null || hasGoals === null) {
+    return (
+      <TelegramProvider>
+        <div className="fixed inset-0 bg-background-light dark:bg-background-dark" />
+      </TelegramProvider>
+    );
+  }
+
   // После прелоадера показываем онбординг или основное приложение
   return (
     <TelegramProvider>
@@ -104,9 +127,9 @@ function App() {
             <Route 
               path="/" 
               element={
-                isFirstLaunch ? (
+                isFirstLaunch === true ? (
                   <OnboardingScreen onComplete={handleOnboardingComplete} />
-                ) : hasGoals ? (
+                ) : hasGoals === true ? (
                   <Navigate to="/map" replace />
                 ) : (
                   <Navigate to="/create-dream-intro" replace />
