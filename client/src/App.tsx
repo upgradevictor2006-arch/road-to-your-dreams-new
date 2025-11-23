@@ -28,9 +28,14 @@ function App() {
   const [showPreloader, setShowPreloader] = useState(true);
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean>(false);
   const [hasGoals, setHasGoals] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Принудительно скрываем прелоадер через максимум 5 секунд
+    const forceHidePreloader = setTimeout(() => {
+      console.warn('Force hiding preloader after timeout');
+      setShowPreloader(false);
+    }, 5000);
+
     const initializeApp = async () => {
       try {
         // Проверяем, первый ли это запуск приложения
@@ -38,28 +43,19 @@ function App() {
         const firstLaunch = hasSeenOnboarding === null;
         setIsFirstLaunch(firstLaunch);
         
-        // Проверяем наличие целей - используем синхронную проверку localStorage как fallback
+        // Проверяем наличие целей - используем синхронную проверку localStorage
         let goalsExist = false;
         try {
-          // Сначала проверяем localStorage напрямую (быстро)
+          // Проверяем localStorage напрямую (быстро и синхронно)
           const localGoals = localStorage.getItem('goals');
           if (localGoals) {
-            const parsed = JSON.parse(localGoals);
-            goalsExist = Array.isArray(parsed) && parsed.length > 0;
-          }
-          
-          // Затем пытаемся проверить через API (если доступно)
-          try {
-            const goals = await Promise.race([
-              goalsStorage.getAll(),
-              new Promise<any[]>((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 1000)
-              )
-            ]);
-            goalsExist = Array.isArray(goals) && goals.length > 0;
-          } catch (apiError) {
-            // Игнорируем ошибки API, используем значение из localStorage
-            console.log('Using localStorage goals check');
+            try {
+              const parsed = JSON.parse(localGoals);
+              goalsExist = Array.isArray(parsed) && parsed.length > 0;
+            } catch (parseError) {
+              console.error('Error parsing goals from localStorage:', parseError);
+              goalsExist = false;
+            }
           }
         } catch (error) {
           console.error('Error checking goals:', error);
@@ -72,15 +68,18 @@ function App() {
         // В случае любой ошибки показываем экран создания цели
         setIsFirstLaunch(false);
         setHasGoals(false);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     initializeApp();
+
+    return () => {
+      clearTimeout(forceHidePreloader);
+    };
   }, []);
 
   const handlePreloaderComplete = () => {
+    console.log('Preloader complete callback called');
     setShowPreloader(false);
   };
 
@@ -102,19 +101,6 @@ function App() {
     return (
       <TelegramProvider>
         <Preloader onComplete={handlePreloaderComplete} />
-      </TelegramProvider>
-    );
-  }
-
-  // Если данные еще загружаются, показываем минимальный экран
-  if (isLoading) {
-    return (
-      <TelegramProvider>
-        <BrowserRouter>
-          <div className="fixed inset-0 bg-background-light dark:bg-background-dark flex items-center justify-center">
-            <div className="text-text-light dark:text-text-dark">Загрузка...</div>
-          </div>
-        </BrowserRouter>
       </TelegramProvider>
     );
   }

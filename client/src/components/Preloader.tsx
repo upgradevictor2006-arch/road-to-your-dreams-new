@@ -10,6 +10,12 @@ const Preloader = ({ onComplete }: PreloaderProps) => {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
+    // Принудительно вызываем onComplete через максимум 4 секунды
+    const forceComplete = setTimeout(() => {
+      console.warn('Preloader force complete after timeout');
+      onComplete();
+    }, 4000);
+
     const timeline = [
       { delay: 150, stage: 1 },   // ROAD вылетает слева
       { delay: 400, stage: 2 },  // TO вылетает справа (после того как ROAD продвинулся)
@@ -24,6 +30,7 @@ const Preloader = ({ onComplete }: PreloaderProps) => {
 
     let currentIndex = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
+    let completed = false;
 
     const runTimeline = () => {
       if (currentIndex < timeline.length) {
@@ -36,7 +43,11 @@ const Preloader = ({ onComplete }: PreloaderProps) => {
           } else {
             // Последняя пауза перед завершением
             setTimeout(() => {
-              onComplete();
+              if (!completed) {
+                completed = true;
+                clearTimeout(forceComplete);
+                onComplete();
+              }
             }, 300);
           }
         }, delay);
@@ -47,6 +58,7 @@ const Preloader = ({ onComplete }: PreloaderProps) => {
     runTimeline();
 
     return () => {
+      clearTimeout(forceComplete);
       timers.forEach(timer => clearTimeout(timer));
     };
   }, [onComplete]);
