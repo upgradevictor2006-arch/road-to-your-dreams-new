@@ -101,6 +101,40 @@ if (!BOT_TOKEN) {
     bot!.sendMessage(chatId, helpText, { parse_mode: 'HTML' });
   });
 
+  // Обработчик callback-кнопок для задач
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message?.chat.id;
+    const data = query.data;
+
+    if (!chatId || !data) return;
+
+    try {
+      if (data.startsWith('task_complete_')) {
+        const goalId = data.replace('task_complete_', '');
+        await bot!.answerCallbackQuery(query.id, { text: '✅ Задача отмечена как выполненная!' });
+        await bot!.editMessageText(
+          '✅ Задача выполнена! Продолжай в том же духе! 💪',
+          {
+            chat_id: chatId,
+            message_id: query.message?.message_id,
+          }
+        );
+      } else if (data.startsWith('task_skip_')) {
+        const goalId = data.replace('task_skip_', '');
+        await bot!.answerCallbackQuery(query.id, { text: '❌ Задача пропущена' });
+        await bot!.editMessageText(
+          '❌ Задача пропущена. Не расстраивайся, завтра новый день! 🌅',
+          {
+            chat_id: chatId,
+            message_id: query.message?.message_id,
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error handling callback query:', error);
+    }
+  });
+
   // Обработка ошибок
   bot.on('polling_error', (error) => {
     console.error('Polling error:', error);

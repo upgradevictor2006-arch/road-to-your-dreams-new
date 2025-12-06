@@ -11,7 +11,9 @@ interface SimpleVerticalMapProps {
   checkpoints?: Checkpoint[];
   goalTitle?: string;
   dailyTask?: string;
-  completedDailyTasks?: Array<{ task: string; completed: boolean }>; // История выполненных задач
+  dailyTaskNumber?: number;
+  dailyTaskDate?: string;
+  completedDailyTasks?: Array<{ task: string; completed: boolean; number?: number; date?: string }>; // История выполненных задач
   animateLineFill?: boolean; // Анимация заполнения линии
   animateDailyTask?: boolean; // Анимация плашки ежедневной задачи
 }
@@ -21,6 +23,8 @@ const SimpleVerticalMap = ({
   checkpoints = [],
   goalTitle = 'Финальная цель',
   dailyTask = '',
+  dailyTaskNumber,
+  dailyTaskDate,
   completedDailyTasks = [],
   animateLineFill = false,
   animateDailyTask = false
@@ -28,7 +32,7 @@ const SimpleVerticalMap = ({
   // Создаем массив всех элементов в правильном порядке:
   // Старт -> Ежедневные задачи (до первого чекпоинта) -> Чекпоинт 1 -> [после выполнения чекпоинта 1] Ежедневные задачи -> Чекпоинт 2 -> ... -> Финал
   const hasDailyTask = !!dailyTask;
-  const allElements: Array<{ type: 'start' | 'daily' | 'checkpoint' | 'finish'; label: string; description?: string; completed?: boolean; checkpointIndex?: number }> = [
+  const allElements: Array<{ type: 'start' | 'daily' | 'checkpoint' | 'finish'; label: string; description?: string; completed?: boolean; checkpointIndex?: number; taskNumber?: number; taskDate?: string }> = [
     { type: 'start', label: 'Старт' }
   ];
   
@@ -48,9 +52,11 @@ const SimpleVerticalMap = ({
     completedDailyTasks.forEach((task) => {
       allElements.push({ 
         type: 'daily' as const, 
-        label: 'Ежедневная задача', 
+        label: `Ежедневная задача #${task.number || completedDailyTasks.indexOf(task) + 1}`, 
         description: task.task,
-        completed: task.completed
+        completed: task.completed,
+        taskNumber: task.number,
+        taskDate: task.date
       });
     });
     
@@ -58,9 +64,11 @@ const SimpleVerticalMap = ({
     if (hasDailyTask) {
       allElements.push({ 
         type: 'daily' as const, 
-        label: 'Ежедневная задача', 
+        label: `Ежедневная задача #${dailyTaskNumber || completedDailyTasks.length + 1}`, 
         description: dailyTask, 
-        completed: false 
+        completed: false,
+        taskNumber: dailyTaskNumber || completedDailyTasks.length + 1,
+        taskDate: dailyTaskDate
       });
     }
   }
@@ -77,14 +85,19 @@ const SimpleVerticalMap = ({
     });
     
     // Если этот чекпоинт выполнен и это последний выполненный, добавляем ежедневные задачи после него
-    if (cp.completed && index === lastCompletedCheckpointIndex) {
-      // Добавляем выполненные задачи
-      completedDailyTasks.forEach((task) => {
+    // Но только если мы еще не добавили задачи ранее
+    if (cp.completed && index === lastCompletedCheckpointIndex && lastCompletedCheckpointIndex >= 0) {
+      // Добавляем выполненные задачи, которые были выполнены после этого чекпоинта
+      const tasksAfterCheckpoint = completedDailyTasks;
+      
+      tasksAfterCheckpoint.forEach((task) => {
         allElements.push({ 
           type: 'daily' as const, 
-          label: 'Ежедневная задача', 
+          label: `Ежедневная задача #${task.number || tasksAfterCheckpoint.indexOf(task) + 1}`, 
           description: task.task,
-          completed: task.completed
+          completed: task.completed,
+          taskNumber: task.number,
+          taskDate: task.date
         });
       });
       
@@ -92,9 +105,11 @@ const SimpleVerticalMap = ({
       if (hasDailyTask) {
         allElements.push({ 
           type: 'daily' as const, 
-          label: 'Ежедневная задача', 
+          label: `Ежедневная задача #${dailyTaskNumber || completedDailyTasks.length + 1}`, 
           description: dailyTask, 
-          completed: false 
+          completed: false,
+          taskNumber: dailyTaskNumber || completedDailyTasks.length + 1,
+          taskDate: dailyTaskDate
         });
       }
     }
@@ -194,6 +209,11 @@ const SimpleVerticalMap = ({
               <div className="font-medium text-base">{element.label}</div>
               {element.description && (
                 <div className="text-sm mt-1 opacity-80">{element.description}</div>
+              )}
+              {element.taskDate && (
+                <div className="text-xs mt-1 opacity-60" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  {new Date(element.taskDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
               )}
             </motion.button>
 

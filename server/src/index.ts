@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import goalsRoutes from './routes/goals';
 import usersRoutes from './routes/users';
 import caravansRoutes from './routes/caravans';
+import notificationsRoutes from './routes/notifications';
 import { verifyTelegramWebAppData } from './middleware/telegramAuth';
 import './bot'; // Инициализируем Telegram бота
 
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 app.use('/api/goals', goalsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/caravans', caravansRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import SimpleVerticalMap from '../components/SimpleVerticalMap';
@@ -24,6 +24,9 @@ const MapScreen = () => {
   const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
   const [kilometers, setKilometers] = useState(0);
   const [caravanMembers, setCaravanMembers] = useState<any[]>([]);
+  const [taskTimer, setTaskTimer] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
+  const [canSkipTask, setCanSkipTask] = useState(false);
+  const [notificationSent, setNotificationSent] = useState(false);
   const newTaskInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,6 +88,55 @@ const MapScreen = () => {
       const savedCompletedTasks = localStorage.getItem(`completedTasks_${goal.id}`);
       if (savedCompletedTasks) {
         setCompletedDailyTasks(JSON.parse(savedCompletedTasks));
+      }
+      
+      // Инициализируем таймер для текущей задачи, если она не выполнена
+      if (goal.dailyTask && !goal.dailyTaskCompleted && goal.dailyTaskStartTime) {
+        const startTime = new Date(goal.dailyTaskStartTime).getTime();
+        const endTime = startTime + 24 * 60 * 60 * 1000; // 24 часа
+        const now = Date.now();
+        
+        if (now < endTime) {
+          // Задача еще активна
+          const remaining = endTime - now;
+          const hours = Math.floor(remaining / (1000 * 60 * 60));
+          const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+          setTaskTimer({ hours, minutes, seconds });
+          
+          // Проверяем, можно ли отменить задачу (осталось меньше 5 минут)
+          const fiveMinutes = 5 * 60 * 1000;
+          setCanSkipTask(remaining <= fiveMinutes);
+          
+          // Проверяем, нужно ли отправить уведомление (осталось 5 минут или меньше)
+          if (remaining <= fiveMinutes && !goal.notificationSent) {
+            sendNotification(goal.id, goal.dailyTask);
+            // Помечаем, что уведомление отправлено
+            const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+            const updatedGoals = goals.map((g: any) => 
+              g.id === goal.id ? { ...g, notificationSent: true } : g
+            );
+            localStorage.setItem('goals', JSON.stringify(updatedGoals));
+            setNotificationSent(true);
+          }
+        } else {
+          // Время истекло
+          setTaskTimer({ hours: 0, minutes: 0, seconds: 0 });
+          setCanSkipTask(true);
+        }
+      } else if (goal.dailyTask && !goal.dailyTaskCompleted && !goal.dailyTaskStartTime) {
+        // Если задача есть, но нет времени начала - устанавливаем его
+        const startTime = new Date().toISOString();
+        const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+        const updatedGoals = goals.map((g: any) => 
+          g.id === goal.id ? { ...g, dailyTaskStartTime: startTime } : g
+        );
+        localStorage.setItem('goals', JSON.stringify(updatedGoals));
+        setCurrentGoal({ ...goal, dailyTaskStartTime: startTime });
+        
+        // Устанавливаем таймер на 24 часа
+        setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
+        setCanSkipTask(false);
       }
       
       // Загружаем выполненные чекпоинты
@@ -399,23 +451,120 @@ const MapScreen = () => {
     }
   }, [shouldShowNewTaskModal, showCheckpointModal, showNewDailyTaskModal, dailyTask, dailyTaskCompleted, currentGoal?.isChallenge]);
 
+  // Функция отправки уведомления
+  const sendNotification = useCallback(async (goalId: string, taskText: string) => {
+    try {
+      // Получаем данные пользователя из Telegram WebApp
+      const tg = (window as any).Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      
+      if (userId) {
+        // Отправляем запрос на сервер для отправки уведомления
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        await fetch(`${API_URL}/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            goalId,
+            message: `⏰ Осталось 5 минут! Не забудь выполнить задачу: ${taskText}`,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  }, []);
+
+  // Обновление таймера каждую секунду
+  useEffect(() => {
+    if (!currentGoal?.dailyTask || currentGoal.dailyTaskCompleted || !currentGoal.dailyTaskStartTime) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const startTime = new Date(currentGoal.dailyTaskStartTime).getTime();
+      const endTime = startTime + 24 * 60 * 60 * 1000; // 24 часа
+      const now = Date.now();
+      const remaining = endTime - now;
+
+      if (remaining > 0) {
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        setTaskTimer({ hours, minutes, seconds });
+
+        // Проверяем, можно ли отменить задачу (осталось меньше 5 минут)
+        const fiveMinutes = 5 * 60 * 1000;
+        setCanSkipTask(remaining <= fiveMinutes);
+
+        // Проверяем, нужно ли отправить уведомление (осталось 5 минут или меньше)
+        if (remaining <= fiveMinutes && !notificationSent) {
+          sendNotification(currentGoal.id, currentGoal.dailyTask);
+          setNotificationSent(true);
+          
+          // Сохраняем флаг отправки уведомления
+          const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+          const updatedGoals = goals.map((g: any) => 
+            g.id === currentGoal.id ? { ...g, notificationSent: true } : g
+          );
+          localStorage.setItem('goals', JSON.stringify(updatedGoals));
+        }
+      } else {
+        // Время истекло
+        setTaskTimer({ hours: 0, minutes: 0, seconds: 0 });
+        setCanSkipTask(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentGoal?.dailyTask, currentGoal?.dailyTaskCompleted, currentGoal?.dailyTaskStartTime, currentGoal?.id, notificationSent, sendNotification]);
+
   const handleSaveNewTask = (newTask: string) => {
     if (!newTask.trim() || !currentGoal) return;
+    
+    // Получаем номер следующей задачи
+    const savedCompletedTasks = localStorage.getItem(`completedTasks_${currentGoal.id}`);
+    const completedTasks = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+    const taskNumber = completedTasks.length + 1;
+    const taskDate = new Date().toISOString().split('T')[0];
+    const taskStartTime = new Date().toISOString();
     
     const goals = JSON.parse(localStorage.getItem('goals') || '[]');
     const updatedGoals = goals.map((g: any) => 
       g.id === currentGoal.id 
-        ? { ...g, dailyTask: newTask.trim(), dailyTaskCompleted: false }
+        ? { 
+            ...g, 
+            dailyTask: newTask.trim(), 
+            dailyTaskCompleted: false,
+            dailyTaskStartTime: taskStartTime,
+            dailyTaskNumber: taskNumber,
+            dailyTaskDate: taskDate,
+            notificationSent: false
+          }
         : g
     );
     localStorage.setItem('goals', JSON.stringify(updatedGoals));
-    setCurrentGoal({ ...currentGoal, dailyTask: newTask.trim(), dailyTaskCompleted: false });
+    setCurrentGoal({ 
+      ...currentGoal, 
+      dailyTask: newTask.trim(), 
+      dailyTaskCompleted: false,
+      dailyTaskStartTime: taskStartTime,
+      dailyTaskNumber: taskNumber,
+      dailyTaskDate: taskDate,
+      notificationSent: false
+    });
     setDailyTaskCompleted(false);
     setMapOffset(0);
     setAnimateLineFill(false);
     setAnimateDailyTask(false);
     setShowNewDailyTaskModal(false);
-    setShouldShowNewTaskModal(false); // Сбрасываем флаг при сохранении задачи
+    setShouldShowNewTaskModal(false);
+    setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
+    setCanSkipTask(false);
+    setNotificationSent(false);
     if (newTaskInputRef.current) {
       newTaskInputRef.current.value = '';
     }
@@ -563,7 +712,15 @@ const MapScreen = () => {
       
       // Добавляем задачу в историю выполненных
       if (dailyTask) {
-        const newCompletedTasks = [...completedDailyTasks, { task: dailyTask, completed: true }];
+        const taskData = {
+          task: dailyTask,
+          completed: true,
+          number: currentGoal.dailyTaskNumber || completedDailyTasks.length + 1,
+          date: currentGoal.dailyTaskDate || new Date().toISOString().split('T')[0],
+          startTime: currentGoal.dailyTaskStartTime || new Date().toISOString(),
+          completedTime: new Date().toISOString()
+        };
+        const newCompletedTasks = [...completedDailyTasks, taskData];
         setCompletedDailyTasks(newCompletedTasks);
         localStorage.setItem(`completedTasks_${currentGoal.id}`, JSON.stringify(newCompletedTasks));
         
@@ -626,17 +783,24 @@ const MapScreen = () => {
   };
 
   const handleSkipDailyTask = () => {
-    if (!currentGoal || dailyTaskCompleted || isAnimating) return;
+    if (!currentGoal || dailyTaskCompleted || isAnimating || !canSkipTask) return;
     
     setIsAnimating(true);
     setShowSadAnimation(true);
     
-    // Добавляем задачу в историю как невыполненную
-    if (dailyTask) {
-      const newCompletedTasks = [...completedDailyTasks, { task: dailyTask, completed: false }];
-      setCompletedDailyTasks(newCompletedTasks);
-      localStorage.setItem(`completedTasks_${currentGoal.id}`, JSON.stringify(newCompletedTasks));
-    }
+      // Добавляем задачу в историю как невыполненную
+      if (dailyTask) {
+        const taskData = {
+          task: dailyTask,
+          completed: false,
+          number: currentGoal.dailyTaskNumber || completedDailyTasks.length + 1,
+          date: currentGoal.dailyTaskDate || new Date().toISOString().split('T')[0],
+          startTime: currentGoal.dailyTaskStartTime || new Date().toISOString()
+        };
+        const newCompletedTasks = [...completedDailyTasks, taskData];
+        setCompletedDailyTasks(newCompletedTasks);
+        localStorage.setItem(`completedTasks_${currentGoal.id}`, JSON.stringify(newCompletedTasks));
+      }
     
     // Обновляем цель в localStorage
     const goals = JSON.parse(localStorage.getItem('goals') || '[]');
@@ -893,24 +1057,44 @@ const MapScreen = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-3">
-                <p className="text-sm font-bold text-text-light dark:text-text-dark" style={{ fontFamily: 'Inter, sans-serif' }}>
-                  Ежедневная задача
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-bold text-text-light dark:text-text-dark" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    Ежедневная задача #{currentGoal?.dailyTaskNumber || completedDailyTasks.length + 1}
+                  </p>
+                  {currentGoal?.dailyTaskDate && (
+                    <span className="text-xs text-text-light/60 dark:text-text-dark/60" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      {new Date(currentGoal.dailyTaskDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
                 <p className="text-text-light/80 dark:text-text-dark/80 text-sm mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
                   {dailyTask}
                 </p>
+                {taskTimer && !dailyTaskCompleted && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                    <span className={`text-xs font-mono font-bold ${
+                      taskTimer.hours === 0 && taskTimer.minutes < 5 
+                        ? 'text-red-500' 
+                        : 'text-primary'
+                    }`} style={{ fontFamily: 'Inter, sans-serif' }}>
+                      {String(taskTimer.hours).padStart(2, '0')}:{String(taskTimer.minutes).padStart(2, '0')}:{String(taskTimer.seconds).padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={canSkipTask ? { scale: 1.1 } : {}}
+                  whileTap={canSkipTask ? { scale: 0.9 } : {}}
                   onClick={handleSkipDailyTask}
-                  disabled={dailyTaskCompleted || isAnimating || currentGoal?.completed}
+                  disabled={dailyTaskCompleted || isAnimating || currentGoal?.completed || !canSkipTask}
                   className={`flex items-center justify-center size-10 rounded-full ${
-                    dailyTaskCompleted || isAnimating
+                    dailyTaskCompleted || isAnimating || !canSkipTask
                       ? 'bg-gray-300/20 text-gray-400 cursor-not-allowed'
                       : 'bg-red-500/20 text-red-500'
                   }`}
+                  title={!canSkipTask ? 'Отмена доступна только за 5 минут до окончания времени' : 'Отменить задачу'}
                 >
                   <span className="material-symbols-outlined !text-2xl">close</span>
                 </motion.button>
@@ -952,6 +1136,8 @@ const MapScreen = () => {
               }))}
               goalTitle={goalTitle}
               dailyTask={dailyTask}
+              dailyTaskNumber={currentGoal?.dailyTaskNumber}
+              dailyTaskDate={currentGoal?.dailyTaskDate}
               completedDailyTasks={completedDailyTasks}
               animateLineFill={animateLineFill}
               animateDailyTask={animateDailyTask}
