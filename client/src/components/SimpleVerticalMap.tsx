@@ -131,8 +131,34 @@ const SimpleVerticalMap = ({
         const isCompletedDaily = element.completed === true;
         const isSkippedDaily = isDaily && element.completed === false; // Невыполненная задача
         const isCompletedCheckpoint = isCheckpoint && element.completed === true;
-        // Невыполненные задачи всегда остаются красными, независимо от прогресса
-        const isCompleted = (isSkippedDaily ? false : (progress >= ((index + 1) / allElements.length) * 100 || isCompletedDaily || isCompletedCheckpoint));
+        
+        // Определяем, завершен ли элемент
+        // Старт всегда завершен
+        // Финал завершен только если прогресс 100%
+        // Чекпоинты завершены если они помечены как completed
+        // Ежедневные задачи завершены если они помечены как completed
+        let isCompleted = false;
+        if (isStart) {
+          isCompleted = true;
+        } else if (isFinish) {
+          isCompleted = progress >= 100;
+        } else if (isCheckpoint) {
+          isCompleted = isCompletedCheckpoint;
+        } else if (isDaily) {
+          isCompleted = isCompletedDaily && !isSkippedDaily;
+        }
+        
+        // Линия завершена, если следующий элемент завершен или текущий элемент завершен
+        const nextElement = index < allElements.length - 1 ? allElements[index + 1] : null;
+        const isNextCompleted = nextElement ? (
+          nextElement.type === 'start' ? true :
+          nextElement.type === 'finish' ? progress >= 100 :
+          nextElement.type === 'checkpoint' ? (nextElement.completed === true) :
+          nextElement.type === 'daily' ? (nextElement.completed === true) :
+          false
+        ) : false;
+        const isLineCompleted = isCompleted || isNextCompleted;
+        
         const shouldAnimateLine = animateLineFill && index === currentDailyTaskIndex - 1 && index >= 0;
         const shouldAnimateTask = animateDailyTask && isCurrentDailyTask;
 
@@ -151,14 +177,14 @@ const SimpleVerticalMap = ({
               } : {}}
               className={`rounded-lg border-2 px-6 py-3 transition-all ${
                 isSkippedDaily
-                  ? 'bg-red-50 border-red-300 text-red-600 opacity-60' // Невыполненные задачи всегда красные
-                  : isCompleted || isCompletedDaily || isCompletedCheckpoint
+                  ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 opacity-60' // Невыполненные задачи всегда красные
+                  : isCompleted
                   ? isStart || isFinish
-                    ? 'bg-orange-100 border-orange-400 text-orange-700'
-                    : isCheckpoint && isCompletedCheckpoint
-                    ? 'bg-green-100 border-green-400 text-green-700'
-                    : 'bg-green-100 border-green-400 text-green-700'
-                  : 'bg-gray-100 border-gray-300 text-gray-700'
+                    ? 'bg-orange-100 dark:bg-orange-900/20 border-orange-400 dark:border-orange-600 text-orange-700 dark:text-orange-300'
+                    : isCheckpoint
+                    ? 'bg-green-100 dark:bg-green-900/20 border-green-400 dark:border-green-600 text-green-700 dark:text-green-300'
+                    : 'bg-green-100 dark:bg-green-900/20 border-green-400 dark:border-green-600 text-green-700 dark:text-green-300'
+                  : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
               }`}
               style={{
                 minWidth: '200px',
@@ -188,8 +214,8 @@ const SimpleVerticalMap = ({
                     backgroundColor: '#10b981',
                     originY: 0
                   }}
-                  initial={{ scaleY: isCompleted ? 1 : 0 }}
-                  animate={shouldAnimateLine ? { scaleY: 1 } : { scaleY: isCompleted ? 1 : 0 }}
+                  initial={{ scaleY: isLineCompleted ? 1 : 0 }}
+                  animate={shouldAnimateLine ? { scaleY: 1 } : { scaleY: isLineCompleted ? 1 : 0 }}
                   transition={{ 
                     duration: shouldAnimateLine ? 1 : 0.3,
                     ease: "easeInOut"

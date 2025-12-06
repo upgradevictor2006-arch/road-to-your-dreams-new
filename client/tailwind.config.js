@@ -9,29 +9,45 @@ export default {
     extend: {
       colors: {
         "primary": "#135bec",
-        "background-light": "#f6f6f8",
-        "background-dark": "#101622",
+        "background": {
+          "light": "#f6f6f8",
+          "dark": "#101622",
+        },
         "sunset-orange": "#FF7A59",
         "off-white": "#F5F5F5",
-        "text-light": "#333333",
-        "text-dark": "#E0E0E0",
-        "subtle-light": "#666666",
-        "subtle-dark": "#A0A0A0",
-        "card-light": "#FFFFFF",
-        "card-dark": "#192233",
-        "progress-bg-light": "#E0E0E0",
-        "progress-bg-dark": "#333333",
+        "text": {
+          "light": "#333333",
+          "dark": "#E0E0E0",
+        },
+        "subtle": {
+          "light": "#666666",
+          "dark": "#A0A0A0",
+        },
+        "card": {
+          "light": "#FFFFFF",
+          "dark": "#192233",
+        },
+        "progress-bg": {
+          "light": "#E0E0E0",
+          "dark": "#333333",
+        },
         "accent": "#F5A623",
         "accent-orange": "#FF6347",
         "accent-green": "#228B22",
         "road-color": "#2D2D2D",
-        "surface-light": "#FFFFFF",
-        "surface-dark": "#1A2233",
-        "border-light": "#E2E8F0",
-        "border-dark": "#334155",
+        "surface": {
+          "light": "#FFFFFF",
+          "dark": "#1A2233",
+        },
+        "border": {
+          "light": "#E2E8F0",
+          "dark": "#334155",
+        },
         "placeholder": "#B0B0B0",
-        "field-light": "#FFFFFF",
-        "field-dark": "#1E293B",
+        "field": {
+          "light": "#FFFFFF",
+          "dark": "#1E293B",
+        },
       },
       fontFamily: {
         "display": ["Plus Jakarta Sans", "sans-serif"],

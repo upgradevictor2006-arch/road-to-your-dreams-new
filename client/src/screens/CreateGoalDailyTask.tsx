@@ -96,8 +96,7 @@ const CreateGoalDailyTask = () => {
           localStorage.setItem('goals', JSON.stringify(updatedGoals));
         }
         
-        navigate('/map', { 
-          state: { goalId: newGoal.id, isNewGoal: true },
+        navigate(`/map?goal=${newGoal.id}`, { 
           replace: true 
         });
       }, 500);
@@ -157,8 +156,7 @@ const CreateGoalDailyTask = () => {
       }
       
       // Переходим на карту с новой целью
-      navigate('/map', { 
-        state: { goalId: newGoal.id, isNewGoal: true },
+      navigate(`/map?goal=${newGoal.id}`, { 
         replace: true 
       });
     }, 2000);

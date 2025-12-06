@@ -42,13 +42,16 @@ const MapScreen = () => {
       localStorage.setItem('kilometers', '0');
     }
     
-    // Получаем данные о цели из location.state или localStorage
+    // Получаем данные о цели из location.state, query параметров или localStorage
     let goal: any = null;
-    if (location.state?.goalId) {
+    const goalId = location.state?.goalId || new URLSearchParams(location.search).get('goal');
+    if (goalId) {
       const goals = JSON.parse(localStorage.getItem('goals') || '[]');
-      goal = goals.find((g: any) => g.id === location.state.goalId);
-    } else {
-      // Если нет конкретной цели, берем первую из списка
+      goal = goals.find((g: any) => g.id === goalId);
+    }
+    
+    // Если цель не найдена, берем первую из списка
+    if (!goal) {
       const goals = JSON.parse(localStorage.getItem('goals') || '[]');
       if (goals.length > 0) {
         goal = goals[0];
@@ -1207,8 +1210,7 @@ const MapScreen = () => {
                       }
                       setShowGoalsModal(false);
                       // Обновляем URL для выбранной цели
-                      navigate('/map', { 
-                        state: { goalId: goal.id },
+                      navigate(`/map?goal=${goal.id}`, { 
                         replace: true 
                       });
                     }}
