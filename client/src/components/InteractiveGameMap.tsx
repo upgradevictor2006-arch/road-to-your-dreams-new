@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface Checkpoint {
   label: string;
@@ -20,7 +20,6 @@ interface InteractiveGameMapProps {
   goalTitle?: string;
   dailyTask?: string;
   dailyTaskNumber?: number;
-  dailyTaskDate?: string;
   completedDailyTasks?: DailyTask[];
   onCheckpointClick?: (index: number) => void;
   onTaskClick?: () => void;
@@ -32,7 +31,6 @@ const InteractiveGameMap = ({
   goalTitle = 'Финальная цель',
   dailyTask = '',
   dailyTaskNumber,
-  dailyTaskDate,
   completedDailyTasks = [],
   onCheckpointClick,
   onTaskClick
@@ -40,7 +38,6 @@ const InteractiveGameMap = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [carPosition, setCarPosition] = useState({ x: 0, y: 0 });
   const [carAngle, setCarAngle] = useState(0);
-  const [selectedElement, setSelectedElement] = useState<number | null>(null);
 
   // Создаем массив всех точек на карте
   const allPoints: Array<{
@@ -295,7 +292,6 @@ const InteractiveGameMap = ({
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              setSelectedElement(idx);
               if (point.type === 'checkpoint' && onCheckpointClick) {
                 onCheckpointClick(point.index);
               } else if (point.type === 'daily' && onTaskClick) {
