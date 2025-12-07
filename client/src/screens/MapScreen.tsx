@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import InteractiveGameMap from '../components/InteractiveGameMap';
+import BeautifulRoadMap from '../components/BeautifulRoadMap';
 
 const MapScreen = () => {
   const navigate = useNavigate();
@@ -1117,36 +1117,20 @@ const MapScreen = () => {
           animate={{ y: mapOffset }}
           transition={{ duration: 0.8, ease: "easeInOut" }}
         >
-          {/* Интерактивная игровая карта */}
+          {/* Красивая карта дороги */}
           <div className="w-full px-4" style={{ paddingTop: '10px', paddingBottom: '80px' }}>
-            <div className="w-full h-[600px] rounded-2xl overflow-hidden">
-              <InteractiveGameMap
-                progress={Math.round(progress)}
-                checkpoints={checkpoints.map((cp: any, index: number) => ({
-                  label: cp.label || '',
-                  description: cp.description || '',
-                  completed: currentGoal?.completedCheckpoints?.[index] || false
-                }))}
-                goalTitle={goalTitle}
-                dailyTask={dailyTask}
-                dailyTaskNumber={currentGoal?.dailyTaskNumber}
-                completedDailyTasks={completedDailyTasks}
-                onCheckpointClick={(index) => {
-                  // Обработка клика на чекпоинт
-                  const checkpoint = checkpoints[index];
-                  if (checkpoint) {
-                    setPendingCheckpoint({ index, checkpoint });
-                    setShowCheckpointModal(true);
-                  }
-                }}
-                onTaskClick={() => {
-                  // Обработка клика на задачу
-                  if (!dailyTaskCompleted) {
-                    handleCompleteDailyTask();
-                  }
-                }}
-              />
-            </div>
+            <BeautifulRoadMap
+              progress={Math.round(progress)}
+              checkpoints={checkpoints.map((cp: any, index: number) => ({
+                label: cp.label || '',
+                description: cp.description || '',
+                completed: currentGoal?.completedCheckpoints?.[index] || false
+              }))}
+              goalTitle={goalTitle}
+              dailyTask={dailyTask}
+              dailyTaskNumber={currentGoal?.dailyTaskNumber}
+              completedDailyTasks={completedDailyTasks}
+            />
           </div>
         </motion.div>
       </main>
