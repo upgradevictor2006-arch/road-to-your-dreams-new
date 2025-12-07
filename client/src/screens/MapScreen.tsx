@@ -1130,7 +1130,6 @@ const MapScreen = () => {
                 goalTitle={goalTitle}
                 dailyTask={dailyTask}
                 dailyTaskNumber={currentGoal?.dailyTaskNumber}
-                dailyTaskDate={currentGoal?.dailyTaskDate}
                 completedDailyTasks={completedDailyTasks}
                 onCheckpointClick={(index) => {
                   // Обработка клика на чекпоинт
