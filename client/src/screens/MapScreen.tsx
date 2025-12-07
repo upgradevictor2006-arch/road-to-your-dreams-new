@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import BeautifulRoadMap from '../components/BeautifulRoadMap';
+import SimpleRoadMap from '../components/SimpleRoadMap';
 
 const MapScreen = () => {
   const navigate = useNavigate();
@@ -1117,9 +1117,9 @@ const MapScreen = () => {
           animate={{ y: mapOffset }}
           transition={{ duration: 0.8, ease: "easeInOut" }}
         >
-          {/* Красивая карта дороги */}
+          {/* Простая карта дороги */}
           <div className="w-full px-4" style={{ paddingTop: '10px', paddingBottom: '80px' }}>
-            <BeautifulRoadMap
+            <SimpleRoadMap
               progress={Math.round(progress)}
               checkpoints={checkpoints.map((cp: any, index: number) => ({
                 label: cp.label || '',
