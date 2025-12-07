@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import SimpleVerticalMap from '../components/SimpleVerticalMap';
+import InteractiveGameMap from '../components/InteractiveGameMap';
 
 const MapScreen = () => {
   const navigate = useNavigate();
@@ -14,8 +14,6 @@ const MapScreen = () => {
   const [showNewDailyTaskModal, setShowNewDailyTaskModal] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [mapOffset, setMapOffset] = useState(0);
-  const [animateLineFill, setAnimateLineFill] = useState(false);
-  const [animateDailyTask, setAnimateDailyTask] = useState(false);
   const [completedDailyTasks, setCompletedDailyTasks] = useState<Array<{ task: string; completed: boolean }>>([]);
   const [showSadAnimation, setShowSadAnimation] = useState(false);
   const [showCheckpointModal, setShowCheckpointModal] = useState(false);
@@ -558,8 +556,6 @@ const MapScreen = () => {
     });
     setDailyTaskCompleted(false);
     setMapOffset(0);
-    setAnimateLineFill(false);
-    setAnimateDailyTask(false);
     setShowNewDailyTaskModal(false);
     setShouldShowNewTaskModal(false);
     setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
@@ -702,13 +698,9 @@ const MapScreen = () => {
     
     setIsAnimating(true);
     
-    // 1. Анимация заполнения линии зеленым
-    setAnimateLineFill(true);
-    
-    // 2. После заполнения линии - анимация плашки ежедневной задачи
+    // Анимация выполнения задачи
     setTimeout(() => {
-      setAnimateDailyTask(true);
-    setDailyTaskCompleted(true);
+      setDailyTaskCompleted(true);
       
       // Добавляем задачу в историю выполненных
       if (dailyTask) {
@@ -1125,23 +1117,37 @@ const MapScreen = () => {
           animate={{ y: mapOffset }}
           transition={{ duration: 0.8, ease: "easeInOut" }}
         >
-          {/* Простая вертикальная карта - старт сразу после карточек */}
+          {/* Интерактивная игровая карта */}
           <div className="w-full px-4" style={{ paddingTop: '10px', paddingBottom: '80px' }}>
-            <SimpleVerticalMap
-              progress={Math.round(progress)}
-              checkpoints={checkpoints.map((cp: any, index: number) => ({
-                label: cp.label || '',
-                description: cp.description || '',
-                completed: currentGoal?.completedCheckpoints?.[index] || false
-              }))}
-              goalTitle={goalTitle}
-              dailyTask={dailyTask}
-              dailyTaskNumber={currentGoal?.dailyTaskNumber}
-              dailyTaskDate={currentGoal?.dailyTaskDate}
-              completedDailyTasks={completedDailyTasks}
-              animateLineFill={animateLineFill}
-              animateDailyTask={animateDailyTask}
-            />
+            <div className="w-full h-[600px] rounded-2xl overflow-hidden">
+              <InteractiveGameMap
+                progress={Math.round(progress)}
+                checkpoints={checkpoints.map((cp: any, index: number) => ({
+                  label: cp.label || '',
+                  description: cp.description || '',
+                  completed: currentGoal?.completedCheckpoints?.[index] || false
+                }))}
+                goalTitle={goalTitle}
+                dailyTask={dailyTask}
+                dailyTaskNumber={currentGoal?.dailyTaskNumber}
+                dailyTaskDate={currentGoal?.dailyTaskDate}
+                completedDailyTasks={completedDailyTasks}
+                onCheckpointClick={(index) => {
+                  // Обработка клика на чекпоинт
+                  const checkpoint = checkpoints[index];
+                  if (checkpoint) {
+                    setPendingCheckpoint({ index, checkpoint });
+                    setShowCheckpointModal(true);
+                  }
+                }}
+                onTaskClick={() => {
+                  // Обработка клика на задачу
+                  if (!dailyTaskCompleted) {
+                    handleCompleteDailyTask();
+                  }
+                }}
+              />
+            </div>
           </div>
         </motion.div>
       </main>
