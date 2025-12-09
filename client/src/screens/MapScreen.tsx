@@ -106,17 +106,8 @@ const MapScreen = () => {
           const fiveMinutes = 5 * 60 * 1000;
           setCanSkipTask(remaining <= fiveMinutes);
           
-          // Проверяем, нужно ли отправить уведомление (осталось 5 минут или меньше)
-          if (remaining <= fiveMinutes && !goal.notificationSent) {
-            sendNotification(goal.id, goal.dailyTask);
-            // Помечаем, что уведомление отправлено
-            const goals = JSON.parse(localStorage.getItem('goals') || '[]');
-            const updatedGoals = goals.map((g: any) => 
-              g.id === goal.id ? { ...g, notificationSent: true } : g
-            );
-            localStorage.setItem('goals', JSON.stringify(updatedGoals));
-            setNotificationSent(true);
-          }
+          // Уведомления теперь планируются автоматически при создании задачи
+          // через scheduleNotification, поэтому здесь ничего не нужно делать
         } else {
           // Время истекло
           setTaskTimer({ hours: 0, minutes: 0, seconds: 0 });
