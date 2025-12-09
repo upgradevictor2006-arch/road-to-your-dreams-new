@@ -112,23 +112,81 @@ if (!BOT_TOKEN) {
       if (data.startsWith('task_complete_')) {
         const goalId = data.replace('task_complete_', '');
         await bot!.answerCallbackQuery(query.id, { text: '✅ Задача отмечена как выполненная!' });
-        await bot!.editMessageText(
-          '✅ Задача выполнена! Продолжай в том же духе! 💪',
-          {
-            chat_id: chatId,
-            message_id: query.message?.message_id,
-          }
-        );
+        
+        // Обновляем сообщение
+        try {
+          await bot!.editMessageText(
+            '✅ <b>Задача выполнена!</b>\n\nПродолжай в том же духе! 💪\n\nТы на правильном пути к своей цели! 🎯',
+            {
+              chat_id: chatId,
+              message_id: query.message?.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '📱 Открыть приложение',
+                      web_app: { url: WEB_APP_URL }
+                    }
+                  ]
+                ]
+              }
+            }
+          );
+        } catch (editError) {
+          // Если не удалось отредактировать, отправляем новое сообщение
+          await bot!.sendMessage(chatId, '✅ Задача выполнена! Продолжай в том же духе! 💪', {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '📱 Открыть приложение',
+                    web_app: { url: WEB_APP_URL }
+                  }
+                ]
+              ]
+            }
+          });
+        }
       } else if (data.startsWith('task_skip_')) {
         const goalId = data.replace('task_skip_', '');
         await bot!.answerCallbackQuery(query.id, { text: '❌ Задача пропущена' });
-        await bot!.editMessageText(
-          '❌ Задача пропущена. Не расстраивайся, завтра новый день! 🌅',
-          {
-            chat_id: chatId,
-            message_id: query.message?.message_id,
-          }
-        );
+        
+        try {
+          await bot!.editMessageText(
+            '❌ <b>Задача пропущена</b>\n\nНе расстраивайся, завтра новый день! 🌅\n\nПомни: каждый день - это новая возможность! 💪',
+            {
+              chat_id: chatId,
+              message_id: query.message?.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '📱 Открыть приложение',
+                      web_app: { url: WEB_APP_URL }
+                    }
+                  ]
+                ]
+              }
+            }
+          );
+        } catch (editError) {
+          await bot!.sendMessage(chatId, '❌ Задача пропущена. Не расстраивайся, завтра новый день! 🌅', {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '📱 Открыть приложение',
+                    web_app: { url: WEB_APP_URL }
+                  }
+                ]
+              ]
+            }
+          });
+        }
       }
     } catch (error) {
       console.error('Error handling callback query:', error);

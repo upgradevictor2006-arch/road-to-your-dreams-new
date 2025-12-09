@@ -45,6 +45,7 @@ NODE_ENV=development
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 JWT_SECRET=your_jwt_secret_here_change_in_production
 CORS_ORIGIN=http://localhost:5173
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 ### `client/.env`

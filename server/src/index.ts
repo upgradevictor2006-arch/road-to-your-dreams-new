@@ -5,6 +5,7 @@ import goalsRoutes from './routes/goals';
 import usersRoutes from './routes/users';
 import caravansRoutes from './routes/caravans';
 import notificationsRoutes from './routes/notifications';
+import aiRoutes from './routes/ai';
 import { verifyTelegramWebAppData } from './middleware/telegramAuth';
 import './bot'; // Инициализируем Telegram бота
 
@@ -47,6 +48,7 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/caravans', caravansRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

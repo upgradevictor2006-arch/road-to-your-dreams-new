@@ -123,18 +123,37 @@ const MapScreen = () => {
           setCanSkipTask(true);
         }
       } else if (goal.dailyTask && !goal.dailyTaskCompleted && !goal.dailyTaskStartTime) {
-        // Если задача есть, но нет времени начала - устанавливаем его
-        const startTime = new Date().toISOString();
-        const goals = JSON.parse(localStorage.getItem('goals') || '[]');
-        const updatedGoals = goals.map((g: any) => 
-          g.id === goal.id ? { ...g, dailyTaskStartTime: startTime } : g
-        );
-        localStorage.setItem('goals', JSON.stringify(updatedGoals));
-        setCurrentGoal({ ...goal, dailyTaskStartTime: startTime });
-        
-        // Устанавливаем таймер на 24 часа
-        setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
-        setCanSkipTask(false);
+      // Если задача есть, но нет времени начала - устанавливаем его
+      const startTime = new Date().toISOString();
+      const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+      const updatedGoals = goals.map((g: any) => 
+        g.id === goal.id ? { ...g, dailyTaskStartTime: startTime } : g
+      );
+      localStorage.setItem('goals', JSON.stringify(updatedGoals));
+      setCurrentGoal({ ...goal, dailyTaskStartTime: startTime });
+      
+      // Устанавливаем таймер на 24 часа
+      setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
+      setCanSkipTask(false);
+      
+      // Планируем уведомление на сервере
+      if (goal.dailyTask) {
+        const tg = (window as any).Telegram?.WebApp;
+        const userId = tg?.initDataUnsafe?.user?.id;
+        if (userId) {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          fetch(`${API_URL}/notifications/schedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              goalId: goal.id,
+              taskText: goal.dailyTask,
+              taskStartTime: startTime,
+            }),
+          }).catch(err => console.error('Error scheduling notification:', err));
+        }
+      }
       }
       
       // Загружаем выполненные чекпоинты
@@ -449,17 +468,17 @@ const MapScreen = () => {
     }
   }, [shouldShowNewTaskModal, showCheckpointModal, showNewDailyTaskModal, dailyTask, dailyTaskCompleted, currentGoal?.isChallenge]);
 
-  // Функция отправки уведомления
-  const sendNotification = useCallback(async (goalId: string, taskText: string) => {
+  // Функция планирования уведомления
+  const scheduleNotification = useCallback(async (goalId: string, taskText: string, taskStartTime: string) => {
     try {
       // Получаем данные пользователя из Telegram WebApp
       const tg = (window as any).Telegram?.WebApp;
       const userId = tg?.initDataUnsafe?.user?.id;
       
       if (userId) {
-        // Отправляем запрос на сервер для отправки уведомления
+        // Планируем уведомление на сервере
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        await fetch(`${API_URL}/notifications/send`, {
+        await fetch(`${API_URL}/notifications/schedule`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -467,12 +486,37 @@ const MapScreen = () => {
           body: JSON.stringify({
             userId,
             goalId,
-            message: `⏰ Осталось 5 минут! Не забудь выполнить задачу: ${taskText}`,
+            taskText,
+            taskStartTime,
           }),
         });
       }
     } catch (error) {
-      console.error('Error sending notification:', error);
+      console.error('Error scheduling notification:', error);
+    }
+  }, []);
+
+  // Функция отмены уведомления
+  const cancelNotification = useCallback(async (goalId: string) => {
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      
+      if (userId) {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        await fetch(`${API_URL}/notifications/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            goalId,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error('Error cancelling notification:', error);
     }
   }, []);
 
@@ -498,12 +542,12 @@ const MapScreen = () => {
         const fiveMinutes = 5 * 60 * 1000;
         setCanSkipTask(remaining <= fiveMinutes);
 
-        // Проверяем, нужно ли отправить уведомление (осталось 5 минут или меньше)
-        if (remaining <= fiveMinutes && !notificationSent) {
-          sendNotification(currentGoal.id, currentGoal.dailyTask);
+        // Планируем уведомление при создании задачи (если еще не запланировано)
+        if (!notificationSent && currentGoal.dailyTaskStartTime) {
+          scheduleNotification(currentGoal.id, currentGoal.dailyTask, currentGoal.dailyTaskStartTime);
           setNotificationSent(true);
           
-          // Сохраняем флаг отправки уведомления
+          // Сохраняем флаг планирования уведомления
           const goals = JSON.parse(localStorage.getItem('goals') || '[]');
           const updatedGoals = goals.map((g: any) => 
             g.id === currentGoal.id ? { ...g, notificationSent: true } : g
@@ -518,7 +562,7 @@ const MapScreen = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentGoal?.dailyTask, currentGoal?.dailyTaskCompleted, currentGoal?.dailyTaskStartTime, currentGoal?.id, notificationSent, sendNotification]);
+  }, [currentGoal?.dailyTask, currentGoal?.dailyTaskCompleted, currentGoal?.dailyTaskStartTime, currentGoal?.id, notificationSent, scheduleNotification]);
 
   const handleSaveNewTask = (newTask: string) => {
     if (!newTask.trim() || !currentGoal) return;
@@ -561,6 +605,24 @@ const MapScreen = () => {
     setTaskTimer({ hours: 24, minutes: 0, seconds: 0 });
     setCanSkipTask(false);
     setNotificationSent(false);
+    
+    // Планируем уведомление на сервере
+    const tg = (window as any).Telegram?.WebApp;
+    const userId = tg?.initDataUnsafe?.user?.id;
+    if (userId) {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      fetch(`${API_URL}/notifications/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          goalId: currentGoal.id,
+          taskText: newTask.trim(),
+          taskStartTime,
+        }),
+      }).catch(err => console.error('Error scheduling notification:', err));
+    }
+    
     if (newTaskInputRef.current) {
       newTaskInputRef.current.value = '';
     }
@@ -701,6 +763,9 @@ const MapScreen = () => {
     // Анимация выполнения задачи
     setTimeout(() => {
       setDailyTaskCompleted(true);
+      
+      // Отменяем запланированное уведомление, так как задача выполнена
+      cancelNotification(currentGoal.id);
       
       // Добавляем задачу в историю выполненных
       if (dailyTask) {

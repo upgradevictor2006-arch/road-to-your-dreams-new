@@ -135,13 +135,13 @@ const CreateGoalDeadline = () => {
       <div className="flex flex-col gap-2 p-4 pt-0">
         <div className="flex gap-6 justify-between">
           <p className="text-[#343A40] dark:text-gray-300 text-sm font-medium leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Шаг 2 из 4
+            Шаг 3 из 5
           </p>
         </div>
         <div className="rounded-full bg-[#CED4DA]/50 dark:bg-gray-700">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: '50%' }}
+            animate={{ width: '60%' }}
             className="h-2 rounded-full bg-primary"
           />
         </div>

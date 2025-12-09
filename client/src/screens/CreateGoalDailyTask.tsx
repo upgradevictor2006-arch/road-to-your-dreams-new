@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import AIAssistant from '../components/AIAssistant';
 
 const CreateGoalDailyTask = () => {
   const navigate = useNavigate();
@@ -196,7 +197,7 @@ const CreateGoalDailyTask = () => {
       <div className="flex flex-col gap-2 p-4 pt-0">
         <div className="flex gap-6 justify-between">
           <p className="text-[#343A40] dark:text-gray-300 text-sm font-medium leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Шаг 4 из 4
+            Шаг 5 из 5
           </p>
         </div>
         <div className="rounded-full bg-[#CED4DA]/50 dark:bg-gray-700">
@@ -216,6 +217,23 @@ const CreateGoalDailyTask = () => {
           <p className="text-text-light/70 dark:text-text-dark/70 text-base font-normal leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
             Это ежедневная обязательная задача, которую нужно выполнять каждый день для достижения своей цели.
           </p>
+        </div>
+
+        <div className="mb-6">
+          <AIAssistant
+            context={{
+              goalTitle: goalData?.goalTitle || '',
+              description: goalData?.description || '',
+              aiPlanning: goalData?.aiPlanning || {},
+              checkpoints: goalData?.checkpoints || [],
+            }}
+            currentStep="daily_task"
+            onSuggestionClick={(suggestion) => {
+              if (suggestion.type === 'daily_task') {
+                setDailyTask(suggestion.message);
+              }
+            }}
+          />
         </div>
 
         <div className="flex flex-col gap-4">

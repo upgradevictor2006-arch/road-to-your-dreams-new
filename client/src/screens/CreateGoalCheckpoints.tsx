@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import AIAssistant from '../components/AIAssistant';
 
 interface Checkpoint {
   id: string;
@@ -169,13 +170,13 @@ const CreateGoalCheckpoints = () => {
       <div className="flex flex-col gap-2 p-4 pt-0">
         <div className="flex gap-6 justify-between">
           <p className="text-[#343A40] dark:text-gray-300 text-sm font-medium leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Шаг 3 из 4
+            Шаг 4 из 5
           </p>
         </div>
         <div className="rounded-full bg-[#CED4DA]/50 dark:bg-gray-700">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: '75%' }}
+            animate={{ width: '80%' }}
             className="h-2 rounded-full bg-primary"
           />
         </div>
@@ -189,6 +190,26 @@ const CreateGoalCheckpoints = () => {
           <p className="text-text-light/70 dark:text-text-dark/70 text-base font-normal leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
             Определи ключевые этапы для отслеживания прогресса. Чего ты хочешь достичь на каждом этапе?
           </p>
+        </div>
+
+        <div className="mt-6 mb-4">
+          <AIAssistant
+            context={{
+              goalTitle: goalData?.goalTitle || '',
+              description: goalData?.description || '',
+              aiPlanning: goalData?.aiPlanning || {},
+              checkpoints: checkpoints.map(cp => ({ label: cp.label, description: cp.description })),
+            }}
+            currentStep="checkpoints"
+            onSuggestionClick={(suggestion) => {
+              if (suggestion.type === 'checkpoint' && checkpoints.length > 0) {
+                const firstEmpty = checkpoints.findIndex(cp => !cp.description.trim());
+                if (firstEmpty !== -1) {
+                  handleCheckpointChange(checkpoints[firstEmpty].id, suggestion.message);
+                }
+              }
+            }}
+          />
         </div>
 
         <div className="flex flex-col gap-0 mt-8">

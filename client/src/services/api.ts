@@ -45,5 +45,14 @@ export const caravansAPI = {
   delete: (id: string) => api.delete(`/caravans/${id}`),
 };
 
+// AI Assistant API
+export const aiAPI = {
+  getCheckpointSuggestions: (context: any) => api.post('/ai/suggestions/checkpoints', context),
+  getDailyTaskSuggestions: (context: any) => api.post('/ai/suggestions/daily-tasks', context),
+  getMotivationalMessage: (context: any, progress: number) => api.post('/ai/motivation', { context, progress }),
+  analyzeGoal: (context: any) => api.post('/ai/analyze', context),
+  getContextualHelp: (context: any, currentStep: string) => api.post('/ai/help', { context, currentStep }),
+};
+
 export default api;
 

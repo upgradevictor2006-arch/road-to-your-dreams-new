@@ -8,6 +8,7 @@ import OnboardingScreen from './screens/OnboardingScreen';
 import GoalsListScreen from './screens/GoalsListScreen';
 import CreateDreamIntroScreen from './screens/CreateDreamIntroScreen';
 import CreateGoalBasicInfo from './screens/CreateGoalBasicInfo';
+import CreateGoalAIPlanning from './screens/CreateGoalAIPlanning';
 import CreateGoalDeadline from './screens/CreateGoalDeadline';
 import CreateGoalCheckpoints from './screens/CreateGoalCheckpoints';
 import CreateGoalDailyTask from './screens/CreateGoalDailyTask';
@@ -126,6 +127,7 @@ function App() {
             <Route path="/create-dream-intro" element={<CreateDreamIntroScreen />} />
             <Route path="/goals" element={<GoalsListScreen />} />
             <Route path="/create-goal/basic" element={<CreateGoalBasicInfo />} />
+            <Route path="/create-goal/ai-planning" element={<CreateGoalAIPlanning />} />
             <Route path="/create-goal/deadline" element={<CreateGoalDeadline />} />
             <Route path="/create-goal/checkpoints" element={<CreateGoalCheckpoints />} />
             <Route path="/create-goal/daily-task" element={<CreateGoalDailyTask />} />

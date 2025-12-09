@@ -9,7 +9,7 @@ const CreateGoalBasicInfo = () => {
 
   const handleNext = () => {
     if (goalTitle.trim()) {
-      navigate('/create-goal/deadline', { state: { goalTitle, description } });
+      navigate('/create-goal/ai-planning', { state: { goalTitle, description } });
     }
   };
 
@@ -42,7 +42,7 @@ const CreateGoalBasicInfo = () => {
       <div className="flex flex-col gap-2 p-4 pt-0">
         <div className="flex gap-6 justify-between">
           <p className="text-[#343A40] dark:text-gray-300 text-sm font-medium leading-normal" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Шаг 1 из 4
+            Шаг 1 из 5
           </p>
         </div>
         <div className="rounded-full bg-[#CED4DA]/50 dark:bg-gray-700">
